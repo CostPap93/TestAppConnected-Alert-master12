@@ -16,6 +16,9 @@ import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.Menu;
@@ -89,6 +92,7 @@ public class SettingActivity  extends AppCompatActivity {
 
     RequestQueue queue;
     String areasIds, categoriesIds;
+    private RecyclerView brandRecyclerView;
 
 
     @Override
@@ -98,7 +102,7 @@ public class SettingActivity  extends AppCompatActivity {
         getSupportActionBar().setTitle("Datalabs");
         settingsPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         checkBox = findViewById(R.id.chbox_category);
-        lv_categories = findViewById(R.id.lv_categories);
+//        lv_categories = findViewById(R.id.lv_categories);
         lv_areas = findViewById(R.id.lv_areas);
 
         btnSave = findViewById(R.id.btn_save);
@@ -149,14 +153,26 @@ public class SettingActivity  extends AppCompatActivity {
                 categories.add(category);
                 System.out.println(categories.get(i).getTitle() + "checkBoxAdapter");
             }
-            CheckBoxAdapter checkBoxAdapter = new CheckBoxAdapter(getApplicationContext(), categories);
 
-            lv_categories.setAdapter(checkBoxAdapter);
+            brandRecyclerView = (RecyclerView) findViewById(R.id.lv_categories);
 
+            //RecyclerView layout manager
+            LinearLayoutManager recyclerLayoutManager = new LinearLayoutManager(this);
+            brandRecyclerView.setLayoutManager(recyclerLayoutManager);
 
-            checkBoxAdapter.notifyDataSetChanged();
+            //RecyclerView item decorator
+            DividerItemDecoration dividerItemDecoration =
+                    new DividerItemDecoration(brandRecyclerView.getContext(),
+                            recyclerLayoutManager.getOrientation());
+            brandRecyclerView.addItemDecoration(dividerItemDecoration);
 
+            //RecyclerView adapater
+            CheckRecycleAdapter recyclerViewAdapter = new
+                    CheckRecycleAdapter(categories,this);
+            brandRecyclerView.setAdapter(recyclerViewAdapter);
         }
+
+
 
         if (settingsPreferences.getInt("numberOfAreas", 0) != 0) {
             for (int i = 0; i < settingsPreferences.getInt("numberOfAreas", 0); i++) {

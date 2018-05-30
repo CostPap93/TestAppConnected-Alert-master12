@@ -143,7 +143,7 @@ public class SplashActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
             }
-        }, 5000);
+        },1000 );
 
 
 
@@ -265,7 +265,7 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     public void volleySetCheckedCategories(final String param,final String param2) {
-        String url = Utils.getUrl()+"jobAdsArray.php?";
+        final String url = Utils.getUrl()+"jobAdsArray.php?";
 
 
 
@@ -392,13 +392,13 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if(!message.equals("")){
-                    Toast.makeText(SplashActivity.this,Utils.getServerError(),Toast.LENGTH_LONG).show();
+                    Toast.makeText(SplashActivity.this,Utils.getServerError()+ "this is the offers",Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SplashActivity.this,MainActivity.class);
                     startActivity(intentError);
                 }
             }
-        }
-        ) {
+        })
+        {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
@@ -466,7 +466,7 @@ public class SplashActivity extends AppCompatActivity {
                             String url = Utils.getUrl()+"jobAdsArray.php?jacat_id="+categoriesIds+"&jloc_id="+areasIds;
                             System.out.println(url);
 
-                            volleySetCheckedCategories(settingsPreferences.getString("categoriesIds",""),settingsPreferences.getString("areasIds",""));
+                            volleySetCheckedCategories(categoriesIds,areasIds);
 
 
 
