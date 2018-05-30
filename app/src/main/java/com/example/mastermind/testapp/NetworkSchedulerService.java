@@ -5,10 +5,15 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
@@ -38,6 +43,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -58,18 +72,18 @@ public class NetworkSchedulerService extends JobService implements
     NotificationCompat.Builder notification;
     private static final int uniqueID = 45612;
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
-    int notCount,areaid;
+    int notCount;
     SharedPreferences settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
 
 
     NotificationManager nm;
     NotificationBadge mBadge;
-    ArrayList<Integer> idArray = new ArrayList<>();
     String message = "";
 
     RequestQueue queue;
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     String categoriesIds,areasIds;
+    int counter;
 
 
 
@@ -138,16 +152,16 @@ public class NetworkSchedulerService extends JobService implements
         if(isConnected && settingsPreferences.getBoolean("makeRequest",true)) {
             initializeBubblesManager();
             for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
-                if (v < settingsPreferences.getInt("numberOfCheckedCategories", 0) - 1) {
-                    categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0) + ",";
+                if (categoriesIds.equals("")) {
+                    categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0) ;
                 } else
-                    categoriesIds += settingsPreferences.getInt("checkedCategoryId " + v, 0);
+                    categoriesIds +="," +settingsPreferences.getInt("checkedCategoryId " + v, 0);
             }
             for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedAreas", 0)); v++) {
-                if (v < settingsPreferences.getInt("numberOfCheckedAreas", 0) - 1) {
-                    areasIds += settingsPreferences.getInt("checkedAreaId " + v, 0) + ",";
+                if (areasIds.equals("")) {
+                    areasIds += settingsPreferences.getInt("checkedAreaId " + v, 0) ;
                 } else
-                    areasIds += settingsPreferences.getInt("checkedAreaId " + v, 0);
+                    areasIds += "," +settingsPreferences.getInt("checkedAreaId " + v, 0);
             }
 
             queue.add(volleySetCheckedCategories(categoriesIds,areasIds));
@@ -185,7 +199,7 @@ public class NetworkSchedulerService extends JobService implements
     }
 
     public StringRequest volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.getUrl()+"jobAdsArray.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -208,11 +222,10 @@ public class NetworkSchedulerService extends JobService implements
                                 JobOffer offer = new JobOffer();
                                 offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
                                 offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
-                                areaid = Integer.valueOf(jsonObjectCategory.getString("jaarea_id"));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jloc_id")));
                                 offer.setTitle(jsonObjectCategory.getString("jad_title"));
                                 offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
-                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jloc_title"));
                                 offer.setLink(jsonObjectCategory.getString("jad_link"));
                                 offer.setDesc(jsonObjectCategory.getString("jad_desc"));
                                 offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
@@ -319,9 +332,9 @@ public class NetworkSchedulerService extends JobService implements
                                 settingsPreferences.edit().putBoolean("makeRequest", false).apply();
                                 settingsPreferences.edit().putLong("lastNotDate", asyncOffers.get(0).getDate().getTime()).apply();
 
-                            } else {
-                                Toast.makeText(MyApplication.getAppContext(), "There is some problem with the server", Toast.LENGTH_LONG);
                             }
+
+                            volleyImageNames();
                         }
 
                     }
@@ -352,9 +365,6 @@ public class NetworkSchedulerService extends JobService implements
 
                 }
                 System.out.println("Volley: " + message);
-                if(!message.equals("")){
-                    Toast.makeText(MyApplication.getAppContext(),"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
-                }
             }
         }
         )
@@ -363,7 +373,7 @@ public class NetworkSchedulerService extends JobService implements
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("jacat_id",param);
-                params.put("jaarea_id",param2);
+                params.put("jloc_id",param2);
 
                 return params;
             }
@@ -412,6 +422,224 @@ public class NetworkSchedulerService extends JobService implements
                 })
                 .build();
         bubblesManager.initialize();
+    }
+
+    public void volleyImageNames() {
+
+        final String url = Utils.getUrl()+"images.php";
+
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+
+
+
+                        // Display the first 500 characters of the response string.
+                        System.out.println("Volley: " + message);
+                        System.out.println(response);
+
+                        try {
+                            JSONObject jsonObjectAll = new JSONObject(response);
+                            JSONArray jsonArray = jsonObjectAll.getJSONArray("images");
+
+                            JSONObject jsonObject1 = jsonArray.getJSONObject(0);
+
+                            if(format.parse(jsonObject1.getString("image_date")).getTime()>settingsPreferences.getLong("lastImageDate",0)){
+                                String[] imageNames = new String[jsonArray.length()];
+                                for(int i=0;i<jsonArray.length();i++) {
+
+
+                                    JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
+                                    imageNames[i] = jsonObjectCategory.getString("image_title");
+
+                                }
+                                settingsPreferences.edit().putLong("lastImageDate",(format.parse(jsonObject1.getString("image_date"))).getTime()).apply();
+                                new DownloadTask().execute(imageNames);
+                            }
+
+
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+
+                    }
+
+
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                    message = "TimeOutError";
+                    //This indicates that the reuest has either time out or there is no connection
+
+                } else if (error instanceof AuthFailureError) {
+                    message = "AuthFailureError";
+                    // Error indicating that there was an Authentication Failure while performing the request
+
+                } else if (error instanceof ServerError) {
+                    message = "ServerError";
+                    //Indicates that the server responded with a error response
+
+                } else if (error instanceof NetworkError) {
+                    message = "NetworkError";
+                    //Indicates that there was network error while performing the request
+
+                } else if (error instanceof ParseError) {
+                    message = "ParseError";
+                    // Indicates that the server response could not be parsed
+
+                }
+                System.out.println("Volley: " + message);
+                if (!message.equals("")) {
+                    Toast.makeText(MyApplication.getAppContext(), Utils.getServerError(), Toast.LENGTH_LONG).show();
+                    Intent intentError = new Intent(MyApplication.getAppContext(), MainActivity.class);
+                    MyApplication.getAppContext().startActivity(intentError);
+                }
+            }
+        }
+        );
+        Volley.newRequestQueue(MyApplication.getAppContext()).add(stringRequest);
+    }
+
+    private class DownloadTask extends AsyncTask<String,Void,ArrayList<Bitmap>> {
+        // Before the tasks execution
+        protected void onPreExecute(){
+            // Display the progress dialog on async task start
+        }
+
+        // Do the task in background/non UI thread
+        protected ArrayList<Bitmap> doInBackground(String...names){
+            HttpURLConnection connection = null;
+            ArrayList<Bitmap> bitmaps = new ArrayList<>();
+
+            try{
+                for(String name:names) {
+                    // Initialize a new http url connection
+                    String stringUrl = Utils.getUrl()+"images/"+name;
+                    URL url = stringToURL(stringUrl);
+                    connection = (HttpURLConnection) url.openConnection();
+
+                    // Connect the http url connection
+                    connection.connect();
+
+                    // Get the input stream from http url connection
+                    InputStream inputStream = connection.getInputStream();
+
+                /*
+                    BufferedInputStream
+                        A BufferedInputStream adds functionality to another input stream-namely,
+                        the ability to buffer the input and to support the mark and reset methods.
+                */
+                /*
+                    BufferedInputStream(InputStream in)
+                        Creates a BufferedInputStream and saves its argument,
+                        the input stream in, for later use.
+                */
+                    // Initialize a new BufferedInputStream from InputStream
+                    BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+
+                /*
+                    decodeStream
+                        Bitmap decodeStream (InputStream is)
+                            Decode an input stream into a bitmap. If the input stream is null, or
+                            cannot be used to decode a bitmap, the function returns null. The stream's
+                            position will be where ever it was after the encoded data was read.
+
+                        Parameters
+                            is InputStream : The input stream that holds the raw data
+                                              to be decoded into a bitmap.
+                        Returns
+                            Bitmap : The decoded bitmap, or null if the image data could not be decoded.
+                */
+                    // Convert BufferedInputStream to Bitmap object
+                    bitmaps.add(BitmapFactory.decodeStream(bufferedInputStream));
+                }
+
+                // Return the downloaded bitmap
+                return bitmaps;
+
+            }catch(IOException e){
+                e.printStackTrace();
+            }finally{
+                // Disconnect the http url connection
+                connection.disconnect();
+            }
+            return null;
+        }
+
+        // When all async task done
+        protected void onPostExecute(ArrayList<Bitmap> result){
+            counter =0;
+            // Hide the progress dialog
+            for(Bitmap bitmap:result) {
+                counter++;
+                Uri uri = saveImageToInternalStorage(bitmap,counter);
+                System.out.println(uri.toString());
+                settingsPreferences.edit().putString("imageUri"+counter,uri.toString()).apply();
+            }
+            settingsPreferences.edit().putInt("numberOfImages",counter).apply();
+
+
+
+        }
+    }
+
+    protected URL stringToURL(String urlString){
+        try{
+            URL url = new URL(urlString);
+            return url;
+        }catch(MalformedURLException e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // Custom method to save a bitmap into internal storage
+    protected Uri saveImageToInternalStorage(Bitmap bitmap,int number){
+        // Initialize ContextWrapper
+        ContextWrapper wrapper = new ContextWrapper(MyApplication.getAppContext());
+
+        // Initializing a new file
+        // The bellow line return a directory in internal storage
+        File file = wrapper.getDir("Images",MODE_PRIVATE);
+
+        // Create a file to save the image
+        file = new File(file, "image"+number+".jpg");
+
+        try{
+            // Initialize a new OutputStream
+            OutputStream stream = null;
+
+            // If the output file exists, it can be replaced or appended to it
+            stream = new FileOutputStream(file);
+
+            // Compress the bitmap
+            bitmap.compress(Bitmap.CompressFormat.JPEG,100,stream);
+
+            // Flushes the stream
+            stream.flush();
+
+            // Closes the stream
+            stream.close();
+
+        }catch (IOException e) // Catch the exception
+        {
+            e.printStackTrace();
+        }
+
+        // Parse the gallery image url to uri
+        Uri savedImageURI = Uri.parse(file.getAbsolutePath());
+
+        // Return the saved image Uri
+        return savedImageURI;
     }
 
 }

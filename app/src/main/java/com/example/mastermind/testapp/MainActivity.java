@@ -14,6 +14,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -64,6 +65,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
@@ -89,26 +93,16 @@ public class MainActivity extends AppCompatActivity  {
     ArrayList<JobOffer> offers;
     ArrayList<JobOffer> asyncOffers;
 
-    private int MY_PERMISSION = 1000;
-    static BubblesManager bubblesManager;
-    private NotificationBadge mBadge;
-    private int count;
     ImageButton imgBtn_ad;
-
-    NotificationCompat.Builder notification;
-    private static final int uniqueID = 45612;
-
-    private PendingIntent pendingIntentA;
-
 
     ListView lv;
     DateFormat format;
     String message = "";
     RequestQueue queue;
-    ArrayList<Integer> idArray = new ArrayList<>();
-    int s = 0;
+
     String areaIds;
     String categoriesIds;
+    String[] paths;
 
 
 
@@ -118,9 +112,6 @@ public class MainActivity extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getSupportActionBar().setTitle("Datalabs");
-//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-//        toolbar.setTitle("Datalabs");
-//        setSupportActionBar(toolbar);
         lv = findViewById(R.id.listView);
         asyncOffers = new ArrayList<>();
         offers = new ArrayList<>();
@@ -181,23 +172,14 @@ public class MainActivity extends AppCompatActivity  {
 
             }
         });
+        if(settingsPreferences.getInt("numberOfImages",0)>0) {
+            paths = new String[settingsPreferences.getInt("numberOfImages", 0)];
 
-        String uri = getIntent().getStringExtra("uri");
-        System.out.println("This is the uri: "+uri.toString());
-
-        if(isConn()) {
-            Random random = new Random();
-
-            Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/image" + random + ".jpg").into(imgBtn_ad);
-            if(imgBtn_ad.getVisibility()==View.INVISIBLE){
-                imgBtn_ad.setVisibility(View.VISIBLE);
+            for (int i = 1; i <= paths.length; i++) {
+                paths[i - 1] = settingsPreferences.getString("imageUri" + i, "");
             }
-        }else {
-            if (imgBtn_ad.getVisibility() == View.VISIBLE) {
-                imgBtn_ad.setVisibility(View.INVISIBLE);
-            }
+            loadImageFromStorage(paths);
         }
-
 
     }
 
@@ -206,19 +188,6 @@ public class MainActivity extends AppCompatActivity  {
         Intent browseIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://datalabs.edu.gr/"));
         startActivity(browseIntent);
     }
-
-    public boolean isConn() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        boolean isWifiConn = networkInfo.isConnected();
-        networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
-        boolean isMobileConn = networkInfo.isConnected();
-        Log.d("connection", "Wifi connected: " + isWifiConn);
-        Log.d("connection", "Mobile connected: " + isMobileConn);
-        return isWifiConn || isMobileConn;
-    }
-
-
 
 
     @Override
@@ -241,6 +210,7 @@ public class MainActivity extends AppCompatActivity  {
 
     public void RefreshOperation() {
 
+
         categoriesIds="";
         areaIds = "";
 
@@ -262,6 +232,16 @@ public class MainActivity extends AppCompatActivity  {
         }
 
 
+        queue.add(volleySetCheckedCategories(categoriesIds,areaIds));
+
+        if(settingsPreferences.getInt("numberOfImages",0)>0) {
+            paths = new String[settingsPreferences.getInt("numberOfImages", 0)];
+
+            for (int i = 1; i <= paths.length; i++) {
+                paths[i - 1] = settingsPreferences.getString("imageUri" + i, "");
+            }
+            loadImageFromStorage(paths);
+        }
 
 
     }
@@ -295,7 +275,7 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     public StringRequest volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.getUrl()+"jobAdsArray.php?";
 
 
         // Request a string response from the provided URL.
@@ -324,10 +304,10 @@ public class MainActivity extends AppCompatActivity  {
                                     JobOffer offer = new JobOffer();
                                     offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
                                     offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                    offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
+                                    offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jloc_id")));
                                     offer.setTitle(jsonObjectCategory.getString("jad_title"));
                                     offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
-                                    offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                    offer.setAreatitle(jsonObjectCategory.getString("jloc_title"));
                                     offer.setLink(jsonObjectCategory.getString("jad_link"));
                                     offer.setDesc(jsonObjectCategory.getString("jad_desc"));
                                     offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
@@ -471,7 +451,7 @@ public class MainActivity extends AppCompatActivity  {
                 }
                 System.out.println("Volley: " + message);
                 if(!message.equals("")){
-                    Toast.makeText(MainActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this,Utils.getServerError(),Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(MainActivity.this,MainActivity.class);
                     startActivity(intentError);
                 }
@@ -482,7 +462,7 @@ public class MainActivity extends AppCompatActivity  {
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("jacat_id",param);
-                params.put("jaarea_id",param2);
+                params.put("jloc_id",param2);
 
                 return params;
             }
@@ -502,13 +482,16 @@ public class MainActivity extends AppCompatActivity  {
     @Override
     protected void onResume() {
         super.onResume();
-        imgBtn_ad = findViewById(R.id.imgBtn_ad);
-        Random random = new Random(2);
+        if(settingsPreferences.getInt("numberOfImages",0)>0) {
+            paths = new String[settingsPreferences.getInt("numberOfImages", 0)];
 
-        Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/image" + random + ".jpg").into(imgBtn_ad);
-        if(imgBtn_ad.getVisibility()==View.INVISIBLE){
-            imgBtn_ad.setVisibility(View.VISIBLE);
+            for (int i = 1; i <= paths.length; i++) {
+                paths[i - 1] = settingsPreferences.getString("imageUri" + i, "");
+            }
+            loadImageFromStorage(paths);
         }
+
+
 
     }
 
@@ -517,82 +500,30 @@ public class MainActivity extends AppCompatActivity  {
         super.onDestroy();
     }
 
-    public void volleyImage() {
-
-        String url = "http://10.0.2.2/android/images.php";
-
-        // Request a string response from the provided URL.
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
 
 
-
-                        // Display the first 500 characters of the response string.
-                        System.out.println("Volley: " + message);
-                        System.out.println(response);
-
-                        try {
-                            JSONObject jsonObjectAll = new JSONObject(response);
-                            JSONArray jsonArray = jsonObjectAll.getJSONArray("images");
-                            String[] imageNames = new String[jsonArray.length()];
-                            for(int i=0;i<jsonArray.length();i++){
+    private void loadImageFromStorage(String[] paths)
+    {
+        ArrayList<Bitmap> bitmaps = new ArrayList<>();
+        for(String path : paths) {
 
 
-                                JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                imageNames[i] = jsonObjectCategory.getString("image_title");
-
-                            }
-
-                            final Random rand = new Random();
-                            final int rndInt = rand.nextInt(imageNames.length);
-
-                            Picasso.with(MainActivity.this).load("http://10.0.2.2/android/images/"+imageNames[rndInt]+".jpg").into(imgBtn_ad);
-
-
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-
-                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
-                    message = "TimeOutError";
-                    //This indicates that the reuest has either time out or there is no connection
-
-                } else if (error instanceof AuthFailureError) {
-                    message = "AuthFailureError";
-                    // Error indicating that there was an Authentication Failure while performing the request
-
-                } else if (error instanceof ServerError) {
-                    message = "ServerError";
-                    //Indicates that the server responded with a error response
-
-                } else if (error instanceof NetworkError) {
-                    message = "NetworkError";
-                    //Indicates that there was network error while performing the request
-
-                } else if (error instanceof ParseError) {
-                    message = "ParseError";
-                    // Indicates that the server response could not be parsed
-
-                }
-                System.out.println("Volley: " + message);
-                if (!message.equals("")) {
-                    Toast.makeText(MainActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
-                    Intent intentError = new Intent(MainActivity.this, SettingActivity.class);
-                    startActivity(intentError);
-                }
+            try {
+                File d = new File(path);
+                System.out.println("This is the path to upload: " + d.toString());
+                bitmaps.add(BitmapFactory.decodeStream(new FileInputStream(d)));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             }
         }
-        );
-        Volley.newRequestQueue(MainActivity.this).add(stringRequest);
+
+        Random r = new Random();
+
+        int rnum =r.nextInt(paths.length);
+        ImageButton img = findViewById(R.id.imgBtn_ad);
+        img.setVisibility(View.VISIBLE);
+        img.setImageBitmap(bitmaps.get(rnum));
+
     }
 
 

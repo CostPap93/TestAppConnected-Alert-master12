@@ -40,6 +40,7 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.squareup.picasso.Picasso;
 
+import org.apache.http.conn.ConnectTimeoutException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -77,13 +78,14 @@ public class SplashActivity extends AppCompatActivity {
 
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     ArrayList<JobOffer> asyncOffers = new ArrayList<>();
-    ArrayList<Integer> idArray = new ArrayList<>();
     String categoriesIds;
     String areasIds;
     SharedPreferences settingsPreferences;
     PendingIntent pendingIntentA;
     int t = 0;
     int areaid = 0;
+    int counter;
+
 
 
     @Override
@@ -92,6 +94,7 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
         areasIds = "";
         categoriesIds = "";
+        counter = 0;
 
         if(queue == null) {
             queue = Volley.newRequestQueue(this);
@@ -132,7 +135,7 @@ public class SplashActivity extends AppCompatActivity {
                     volleySetDefault();
 
                 } else if (settingsPreferences.getInt("numberOfCategories", 0) == 0 && settingsPreferences.getInt("numberOfAreas", 0) == 0 && !isConn()) {
-                    Toast.makeText(SplashActivity.this, "You Have To Be Connected To The Internet The First Time", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SplashActivity.this, "Πρέπει να είστε συνδεδεμένος την πρώτη φορά!", Toast.LENGTH_LONG).show();
                     Intent intent = new Intent(SplashActivity.this,MainActivity.class);
                     startActivity(intent);
                 } else {
@@ -140,7 +143,7 @@ public class SplashActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
             }
-        }, 2000);
+        }, 5000);
 
 
 
@@ -170,114 +173,8 @@ public class SplashActivity extends AppCompatActivity {
         Toast.makeText(this, "Alarm Set", Toast.LENGTH_SHORT).show();
     }
 
-   /* public class TaskShowOffersFromCategories extends AsyncTask<String,Integer,ArrayList<JobOffer>> {
-        SharedPreferences settingsPreferences = PreferenceManager.getDefaultSharedPreferences(MyApplication.getAppContext());
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-        protected void onPreExecute() {
-
-
-
-            super.onPreExecute();
-
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<JobOffer> fiveOffers) {
-
-            for (int j = 0; j < 5; j++) {
-                settingsPreferences.edit().remove("offerId " + j).apply();
-                settingsPreferences.edit().remove("offerCatid " + j).apply();
-                settingsPreferences.edit().remove("offerTitle " + j).apply();
-                settingsPreferences.edit().remove("offerDate " + j).apply();
-                settingsPreferences.edit().remove("offerDownloaded " + j).apply();
-            }
-            for (int i = 0; i < asyncOffers.size(); i++) {
-                if (i < 5) {
-
-                    settingsPreferences.edit().putInt("offerId " + i, asyncOffers.get(i).getId()).apply();
-                    settingsPreferences.edit().putInt("offerCatid " + i, asyncOffers.get(i).getCatid()).apply();
-                    settingsPreferences.edit().putString("offerTitle " + i, asyncOffers.get(i).getTitle()).apply();
-                    settingsPreferences.edit().putLong("offerDate " + i, asyncOffers.get(i).getDate().getTime()).apply();
-                    settingsPreferences.edit().putString("offerDownloaded " + i, asyncOffers.get(i).getDownloaded()).apply();
-                    System.out.println(settingsPreferences.getLong("offerDate " + i, 0));
-                    System.out.println(settingsPreferences.getString("offerTitle " + i, ""));
-                    settingsPreferences.edit().putInt("numberOfOffers", asyncOffers.size()).apply();
-                } else
-                    settingsPreferences.edit().putInt("numberOfOffers", 5).apply();
-            }
-
-            settingsPreferences.edit().putLong("lastSeenDate", asyncOffers.get(0).getDate().getTime()).apply();
-
-            System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
-
-            start();
-
-            Intent intent = new Intent(MyApplication.getAppContext(), MainActivity.class);
-            MyApplication.getAppContext().startActivity(intent);
-
-        }
-
-        @Override
-        protected ArrayList<JobOffer> doInBackground(String... params) {
-
-            Map<String, String> postParam = new HashMap<>();
-            postParam.put("action", "showOffersFromCategory");
-            postParam.put("jacat_id",params[0]);
-
-            try {
-                String jsonString = m_AccessServiceAPI.getJSONStringWithParam_POST("http://10.0.2.2/android/jobAds.php?", postParam);
-                JSONObject jsonObjectAll = new JSONObject(jsonString);
-                JSONArray jsonArray = jsonObjectAll.getJSONArray("offers");
-                int i = 0;
-
-                while(i<jsonArray.length() && i<5) {
-
-                    JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-
-                    JobOffer offer = new JobOffer();
-                    offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
-                    offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                    offer.setTitle(jsonObjectCategory.getString("jad_title"));
-                    offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
-                    offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
-                    System.out.println(offer.getTitle() + " first time");
-
-                    asyncOffers.add(offer);
-
-
-                    Collections.sort(asyncOffers, new Comparator<JobOffer>() {
-                        @Override
-                        public int compare(JobOffer jobOffer, JobOffer t1) {
-                            if(jobOffer.getDate().getTime()-t1.getDate().getTime()<0)
-                                return 1;
-                            else if(jobOffer.getDate().getTime()-t1.getDate().getTime()==0)
-                                return 0;
-                            else
-                                return -1;
-                        }
-                    });
-                    for(int x=0;x<asyncOffers.size();x++) {
-                        System.out.println(asyncOffers.get(x).getTitle());
-                    }
-
-                    i++;
-                }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-            return asyncOffers;
-        }
-
-    }*/
-
     public void volleySetDefault(){
-        String url ="http://10.0.2.2/android/jobOfferCategories.php";
+        String url =Utils.getUrl()+"jobOfferCategories.php";
 
     // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -357,7 +254,7 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 System.out.println("Volley: "+ message);
                 if(!message.equals("")){
-                    Toast.makeText(SplashActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
+                    Toast.makeText(SplashActivity.this,Utils.getServerError(),Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SplashActivity.this,MainActivity.class);
                     startActivity(intentError);
                 }
@@ -368,7 +265,9 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     public void volleySetCheckedCategories(final String param,final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.getUrl()+"jobAdsArray.php?";
+
+
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -390,15 +289,16 @@ public class SplashActivity extends AppCompatActivity {
                                 JobOffer offer = new JobOffer();
                                 offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
                                 offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
-                                areaid = Integer.valueOf(jsonObjectCategory.getString("jaarea_id"));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jloc_id")));
+                                areaid = Integer.valueOf(jsonObjectCategory.getString("jloc_id"));
                                 offer.setTitle(jsonObjectCategory.getString("jad_title"));
                                 offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
-                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
-                                offer.setLink(jsonObjectCategory.getString("jad_link"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jloc_title"));
+
                                 offer.setDesc(jsonObjectCategory.getString("jad_desc"));
                                 offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
                                 offer.setDownloaded(jsonObjectCategory.getString("jad_downloaded"));
+                                offer.setLink(jsonObjectCategory.getString("jad_link"));
                                 System.out.println(offer.getTitle() + " first time");
 
                                 asyncOffers.add(offer);
@@ -492,7 +392,7 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if(!message.equals("")){
-                    Toast.makeText(SplashActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
+                    Toast.makeText(SplashActivity.this,Utils.getServerError(),Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SplashActivity.this,MainActivity.class);
                     startActivity(intentError);
                 }
@@ -503,7 +403,7 @@ public class SplashActivity extends AppCompatActivity {
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("jacat_id",param);
-                params.put("jaarea_id",param2);
+                params.put("jloc_id",param2);
 
                 return params;
             }
@@ -518,7 +418,7 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     public void volleySetDefaultAreas(){
-        String url ="http://10.0.2.2/android/jobOfferAreas.php";
+        String url =Utils.getUrl()+"jobOfferAreas.php";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -541,15 +441,15 @@ public class SplashActivity extends AppCompatActivity {
                             System.out.println(settingsPreferences.getInt("numberOfAreas", 0));
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
-                                settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
+                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
+                                settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
 
                                 if(areasIds.equals("")) {
-                                    areasIds += jsonObjectCategory.getString("jaarea_id");
+                                    areasIds += jsonObjectCategory.getString("jloc_id");
                                 }else
-                                    areasIds += ","+ jsonObjectCategory.getString("jaarea_id");
+                                    areasIds += ","+ jsonObjectCategory.getString("jloc_id");
                                 System.out.println(areasIds.toString());
 
                                 System.out.println(jsonObjectCategory.toString());
@@ -559,16 +459,20 @@ public class SplashActivity extends AppCompatActivity {
                             settingsPreferences.edit().putString("areasIds",areasIds).apply();
                             System.out.println(settingsPreferences.getInt("numberOfCheckedAreas", 0));
 
-                            volleySetCheckedCategories(categoriesIds, areasIds);
+
+                            System.out.println(settingsPreferences.getString("categoriesIds",""));
+                            System.out.println(settingsPreferences.getString("areasIds",""));
+
+                            String url = Utils.getUrl()+"jobAdsArray.php?jacat_id="+categoriesIds+"&jloc_id="+areasIds;
+                            System.out.println(url);
+
+                            volleySetCheckedCategories(settingsPreferences.getString("categoriesIds",""),settingsPreferences.getString("areasIds",""));
 
 
 
 
                         } catch (JSONException e) {
-
                             e.printStackTrace();
-                            Intent intentError = new Intent(SplashActivity.this,MainActivity.class);
-                            startActivity(intentError);
                         }
                     }
                 }, new Response.ErrorListener() {
@@ -598,7 +502,7 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 System.out.println("Volley: "+ message);
                 if(!message.equals("")){
-                    Toast.makeText(SplashActivity.this,"There is some problem with the server ("+message+")",Toast.LENGTH_LONG).show();
+                    Toast.makeText(SplashActivity.this,Utils.getServerError(),Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SplashActivity.this,MainActivity.class);
                     startActivity(intentError);
                 }
@@ -610,14 +514,14 @@ public class SplashActivity extends AppCompatActivity {
 
     public void volleyImageNames() {
 
-        final String url = "http://10.0.2.2/android/images.php";
+        final String url = Utils.getUrl()+"images.php";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-
+                        int numberOfImages=0;
                         ArrayList<Bitmap> myBitmaps = new ArrayList<>();
 
 
@@ -630,22 +534,27 @@ public class SplashActivity extends AppCompatActivity {
                         try {
                             JSONObject jsonObjectAll = new JSONObject(response);
                             JSONArray jsonArray = jsonObjectAll.getJSONArray("images");
-                            URL[] urls = new URL[jsonArray.length()];
+                            numberOfImages = jsonArray.length();
+                            String[] imageNames = new String[jsonArray.length()];
                             for(int i=0;i<jsonArray.length();i++) {
 
 
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                urls[i] = stringToURL("http://10.0.2.2/android/images/" + jsonObjectCategory.getString("image_title"));
+                                imageNames[i] = jsonObjectCategory.getString("image_title");
+
 
 
                             }
-
-                            for(int j=0;j<urls.length;j++){
-                                new DownloadTask().execute(urls[j]);
+                            if(jsonArray.length()>0) {
+                                JSONObject jsonObject1 = jsonArray.getJSONObject(0);
+                                settingsPreferences.edit().putLong("lastImageDate", (format.parse(jsonObject1.getString("image_date"))).getTime()).apply();
+                                new DownloadTask().execute(imageNames);
                             }
 
 
                         } catch (JSONException e) {
+                            e.printStackTrace();
+                        } catch (ParseException e) {
                             e.printStackTrace();
                         }
 
@@ -680,7 +589,7 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SplashActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SplashActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SplashActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
@@ -690,26 +599,30 @@ public class SplashActivity extends AppCompatActivity {
         Volley.newRequestQueue(SplashActivity.this).add(stringRequest);
     }
 
-    private class DownloadTask extends AsyncTask<URL,Void,Bitmap>{
+    private class DownloadTask extends AsyncTask<String,Void,ArrayList<Bitmap>>{
+
         // Before the tasks execution
         protected void onPreExecute(){
             // Display the progress dialog on async task start
         }
 
         // Do the task in background/non UI thread
-        protected Bitmap doInBackground(URL...urls){
-            URL url = urls[0];
+        protected ArrayList<Bitmap> doInBackground(String...names){
             HttpURLConnection connection = null;
+            ArrayList<Bitmap> bitmaps = new ArrayList<>();
 
             try{
-                // Initialize a new http url connection
-                connection = (HttpURLConnection) url.openConnection();
+                for(String name:names) {
+                    // Initialize a new http url connection
+                    String stringUrl = Utils.getUrl()+"images/"+name;
+                    URL url = stringToURL(stringUrl);
+                    connection = (HttpURLConnection) url.openConnection();
 
-                // Connect the http url connection
-                connection.connect();
+                    // Connect the http url connection
+                    connection.connect();
 
-                // Get the input stream from http url connection
-                InputStream inputStream = connection.getInputStream();
+                    // Get the input stream from http url connection
+                    InputStream inputStream = connection.getInputStream();
 
                 /*
                     BufferedInputStream
@@ -721,8 +634,8 @@ public class SplashActivity extends AppCompatActivity {
                         Creates a BufferedInputStream and saves its argument,
                         the input stream in, for later use.
                 */
-                // Initialize a new BufferedInputStream from InputStream
-                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+                    // Initialize a new BufferedInputStream from InputStream
+                    BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
 
                 /*
                     decodeStream
@@ -737,14 +650,16 @@ public class SplashActivity extends AppCompatActivity {
                         Returns
                             Bitmap : The decoded bitmap, or null if the image data could not be decoded.
                 */
-                // Convert BufferedInputStream to Bitmap object
-                Bitmap bmp = BitmapFactory.decodeStream(bufferedInputStream);
+                    // Convert BufferedInputStream to Bitmap object
+                    bitmaps.add(BitmapFactory.decodeStream(bufferedInputStream));
+                }
 
                 // Return the downloaded bitmap
-                return bmp;
+                return bitmaps;
 
             }catch(IOException e){
                 e.printStackTrace();
+                Toast.makeText(SplashActivity.this,e.getMessage(),Toast.LENGTH_LONG).show();
             }finally{
                 // Disconnect the http url connection
                 connection.disconnect();
@@ -753,16 +668,23 @@ public class SplashActivity extends AppCompatActivity {
         }
 
         // When all async task done
-        protected void onPostExecute(Bitmap result){
+        protected void onPostExecute(ArrayList<Bitmap> result){
+            counter =0;
             // Hide the progress dialog
+            for(Bitmap bitmap:result) {
+                counter++;
+                Uri uri = saveImageToInternalStorage(bitmap,counter);
+                System.out.println(uri.toString());
+                settingsPreferences.edit().putString("imageUri"+counter,uri.toString()).apply();
+            }
+            settingsPreferences.edit().putInt("numberOfImages",counter).apply();
 
-            Uri uri =saveImageToInternalStorage(result);
             Intent intent = new Intent(SplashActivity.this,MainActivity.class);
-            intent.putExtra("uri",uri.toString());
             startActivity(intent);
 
 
         }
+
     }
 
     // Custom method to convert string to url
@@ -777,7 +699,7 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     // Custom method to save a bitmap into internal storage
-    protected Uri saveImageToInternalStorage(Bitmap bitmap){
+    protected Uri saveImageToInternalStorage(Bitmap bitmap,int number){
         // Initialize ContextWrapper
         ContextWrapper wrapper = new ContextWrapper(getApplicationContext());
 
@@ -786,7 +708,7 @@ public class SplashActivity extends AppCompatActivity {
         File file = wrapper.getDir("Images",MODE_PRIVATE);
 
         // Create a file to save the image
-        file = new File(file, "UniqueFileName"+".jpg");
+        file = new File(file, "image"+number+".jpg");
 
         try{
             // Initialize a new OutputStream
@@ -815,8 +737,5 @@ public class SplashActivity extends AppCompatActivity {
         // Return the saved image Uri
         return savedImageURI;
     }
-
-
-
 
 }

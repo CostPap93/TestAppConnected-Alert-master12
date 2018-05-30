@@ -7,6 +7,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -20,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -42,6 +45,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -52,6 +58,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Created by mastermind on 9/5/2018.
@@ -65,6 +72,7 @@ public class UnseenActivity  extends AppCompatActivity {
 
     ListView lv;
     DateFormat format;
+    String[] paths;
 
 
 
@@ -126,6 +134,15 @@ public class UnseenActivity  extends AppCompatActivity {
             }
         });
 
+        if (settingsPreferences.getInt("numberOfImages",0)>0) {
+            paths = new String[settingsPreferences.getInt("numberOfImages", 0)];
+            for (int i = 1; i <= paths.length; i++) {
+                paths[i - 1] = settingsPreferences.getString("imageUri" + i, "");
+            }
+            loadImageFromStorage(paths);
+        }
+
+
     }
 
 
@@ -164,5 +181,30 @@ public class UnseenActivity  extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+    }
+
+
+    private void loadImageFromStorage(String[] paths)
+    {
+        ArrayList<Bitmap> bitmaps = new ArrayList<>();
+        for(String path : paths) {
+
+
+            try {
+                File d = new File(path);
+                System.out.println("This is the path to upload: " + d.toString());
+                bitmaps.add(BitmapFactory.decodeStream(new FileInputStream(d)));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Random r = new Random();
+
+        int rnum =r.nextInt(paths.length);
+        ImageButton img = findViewById(R.id.imgBtn_ad);
+        img.setVisibility(View.VISIBLE);
+        img.setImageBitmap(bitmaps.get(rnum));
+
     }
 }

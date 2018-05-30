@@ -84,15 +84,10 @@ public class SettingActivity  extends AppCompatActivity {
     String message = "";
     ArrayList<OfferArea> offerAreas;
     ArrayList<OfferCategory> offerCategories;
-    boolean addNewChecked = true;
-
-    ArrayList<Integer> idArray = new ArrayList<>();
     SimpleDateFormat format;
     PendingIntent pendingIntentA;
-    private int selected;
 
     RequestQueue queue;
-    int t = 0, s = 0;
     String areasIds, categoriesIds;
 
 
@@ -279,11 +274,11 @@ public class SettingActivity  extends AppCompatActivity {
 
                 int r =0;
                 for (OfferCategory oc : offerCategories) {
-                    if (r < offerCategories.size() - 1) {
-                        categoriesIds += oc.getCatid() + ",";
+                    if (categoriesIds.equals("")) {
+                        categoriesIds += oc.getCatid();
                         r++;
                     } else {
-                        categoriesIds += oc.getCatid();
+                        categoriesIds +=  "," +oc.getCatid();
                         r++;
                     }
 
@@ -291,11 +286,11 @@ public class SettingActivity  extends AppCompatActivity {
                 System.out.println(categoriesIds);
                 int x = 0;
                 for (OfferArea oa : offerAreas) {
-                    if (x < offerAreas.size() - 1) {
-                        areasIds += oa.getAreaid() + ",";
+                    if (areasIds.equals("")) {
+                        areasIds += oa.getAreaid();
                         x++;
                     } else {
-                        areasIds += oa.getAreaid();
+                        areasIds +=  "," +oa.getAreaid();
                         x++;
                     }
 
@@ -303,19 +298,19 @@ public class SettingActivity  extends AppCompatActivity {
 
                 System.out.println(categoriesIds);
                 System.out.println(areasIds);
-                queue.add(volleySaveOffers(categoriesIds,areasIds));
+                volleySaveOffers(categoriesIds,areasIds);
 
 
             }else if(offerCategories.isEmpty()){
-                Toast.makeText(MyApplication.getAppContext(), "You have to choose at least one category", Toast.LENGTH_LONG).show();
+                Toast.makeText(MyApplication.getAppContext(), "Πρέπει να επιλέξετε τουλάχιστον μία κατηγορία!", Toast.LENGTH_LONG).show();
             }else if(offerAreas.isEmpty()){
-                Toast.makeText(MyApplication.getAppContext(), "You have to choose at least one area", Toast.LENGTH_LONG).show();
+                Toast.makeText(MyApplication.getAppContext(), "Πρέπει να επιλέξετε τουλάχιστον μία περιοχή!", Toast.LENGTH_LONG).show();
             }
 
 
 
         }else  {
-            Toast.makeText(SettingActivity.this, "You Have To Be Connected To Reset", Toast.LENGTH_LONG).show();
+            Toast.makeText(SettingActivity.this, "Πρέπει να είστε συνδεδεμένος για να γίνει αποθήκευση των επιλογών σας!", Toast.LENGTH_LONG).show();
         }
 
     }
@@ -326,31 +321,15 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public void btnResetClicked(View view) throws ExecutionException, InterruptedException {
-        areasIds = "";
-        categoriesIds = "";
+
         if (isConn()) {
             cancel();
 
             volleySetDefault();
-            //new TaskSetDefaultCateogries().execute().get();
-
-            /*for (int v = 0; v < (settingsPreferences.getInt("numberOfCheckedCategories", 0)); v++) {
-                if (settingsPreferences.getInt("checkedCategoryId " + v, 0) != 0) {
-                    System.out.println(settingsPreferences.getInt("checkedCategoryId " + v, 0) + "Before the task show for the first time");
-                    System.out.println(settingsPreferences.getString("checkedCategoryTitle " + v, ""));
-                    try {
-                        new TaskShowOffersFromCategories().execute(String.valueOf(settingsPreferences.getInt("checkedCategoryId " + v, 0))).get();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }*/
             settingsPreferences.edit().putLong("interval", 6000).apply();
             start();
         } else {
-            Toast.makeText(SettingActivity.this, "You Have To Be Connected To Reset", Toast.LENGTH_LONG).show();
+            Toast.makeText(SettingActivity.this, "Πρέπει να είστε συνδεδεμένος για να γίνει επαναφορά των επιλογών σας!", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -393,7 +372,7 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public StringRequest volleyUpdateDefault() {
-        String url = "http://10.0.2.2/android/jobOfferCategories.php?";
+        String url = Utils.getUrl()+"jobOfferCategories.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -468,7 +447,7 @@ public class SettingActivity  extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SettingActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SettingActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
@@ -479,7 +458,7 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public StringRequest volleyUpdateDefaultAreas() {
-        String url = "http://10.0.2.2/android/jobOfferAreas.php?";
+        String url = Utils.getUrl()+"jobOfferAreas.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -500,8 +479,8 @@ public class SettingActivity  extends AppCompatActivity {
                             System.out.println(settingsPreferences.getInt("numberOfAreas", 0));
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
+                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
                                 System.out.println(jsonObjectCategory.toString());
 
                             }
@@ -553,7 +532,7 @@ public class SettingActivity  extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SettingActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SettingActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
@@ -564,9 +543,9 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
 
-    public StringRequest volleySaveOffers(final String param, final String param2) {
+    public void volleySaveOffers(final String param, final String param2) {
 
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.getUrl()+"jobAdsArray.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -592,10 +571,10 @@ public class SettingActivity  extends AppCompatActivity {
                                 JobOffer offer = new JobOffer();
                                 offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
                                 offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jloc_id")));
                                 offer.setTitle(jsonObjectCategory.getString("jad_title"));
                                 offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
-                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jloc_title"));
                                 offer.setLink(jsonObjectCategory.getString("jad_link"));
                                 offer.setDesc(jsonObjectCategory.getString("jad_desc"));
                                 offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
@@ -741,7 +720,7 @@ public class SettingActivity  extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SettingActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SettingActivity.this, SettingActivity.class);
                     startActivity(intentError);
                 }
@@ -752,17 +731,18 @@ public class SettingActivity  extends AppCompatActivity {
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("jacat_id", param);
-                params.put("jaarea_id", param2);
+                params.put("jloc_id", param2);
 
                 return params;
             }
         };
-        return stringRequest;
+        Volley.newRequestQueue(MyApplication.getAppContext()).add(stringRequest);
     }
 
 
     public void volleySetDefault() {
-        String url = "http://10.0.2.2/android/jobOfferCategories.php";
+        String url = Utils.getUrl()+"jobOfferCategories.php";
+        categoriesIds = "";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -786,10 +766,10 @@ public class SettingActivity  extends AppCompatActivity {
                                 settingsPreferences.edit().putInt("checkedCategoryId " + i, Integer.valueOf(jsonObjectCategory.getString("jacat_id"))).apply();
                                 settingsPreferences.edit().putString("offerCategoryTitle " + i, jsonObjectCategory.getString("jacat_title")).apply();
                                 settingsPreferences.edit().putString("checkedCategoryTitle " + i, jsonObjectCategory.getString("jacat_title")).apply();
-                                if (i < jsonArray.length() - 1) {
-                                    categoriesIds += jsonObjectCategory.getString("jacat_id") + ",";
+                                if (categoriesIds.equals("")) {
+                                    categoriesIds += jsonObjectCategory.getString("jacat_id") ;
                                 } else
-                                    categoriesIds += jsonObjectCategory.getString("jacat_id");
+                                    categoriesIds += "," +jsonObjectCategory.getString("jacat_id");
                                 System.out.println(categoriesIds.toString());
 
 
@@ -835,7 +815,7 @@ public class SettingActivity  extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SettingActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                     startActivity(intentError);
                 }
@@ -846,7 +826,7 @@ public class SettingActivity  extends AppCompatActivity {
     }
 
     public void volleySetCheckedCategories(final String param, final String param2) {
-        String url = "http://10.0.2.2/android/jobAdsArray.php?";
+        String url = Utils.getUrl()+"jobAdsArray.php?";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
@@ -868,10 +848,10 @@ public class SettingActivity  extends AppCompatActivity {
                                 JobOffer offer = new JobOffer();
                                 offer.setId(Integer.valueOf(jsonObjectCategory.getString("jad_id")));
                                 offer.setCatid(Integer.valueOf(jsonObjectCategory.getString("jad_catid")));
-                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jaarea_id")));
+                                offer.setAreaid(Integer.valueOf(jsonObjectCategory.getString("jloc_id")));
                                 offer.setTitle(jsonObjectCategory.getString("jad_title"));
                                 offer.setCattitle(jsonObjectCategory.getString("jacat_title"));
-                                offer.setAreatitle(jsonObjectCategory.getString("jaarea_title"));
+                                offer.setAreatitle(jsonObjectCategory.getString("jloc_title"));
                                 offer.setLink(jsonObjectCategory.getString("jad_link"));
                                 offer.setDesc(jsonObjectCategory.getString("jad_desc"));
                                 offer.setDate(format.parse(jsonObjectCategory.getString("jad_date")));
@@ -949,8 +929,6 @@ public class SettingActivity  extends AppCompatActivity {
                             System.out.println(settingsPreferences.getLong("lastSeenDate", 0));
 
                         }
-
-                        System.out.println(t);
                         System.out.println(settingsPreferences.getInt("numberOfCheckedCategories", 0));
 
                         Intent intent = new Intent(SettingActivity.this, MainActivity.class);
@@ -986,7 +964,7 @@ public class SettingActivity  extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SettingActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                     startActivity(intentError);
                 }
@@ -997,7 +975,7 @@ public class SettingActivity  extends AppCompatActivity {
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("jacat_id", param);
-                params.put("jaarea_id", param2);
+                params.put("jloc_id", param2);
 
                 return params;
             }
@@ -1007,7 +985,8 @@ public class SettingActivity  extends AppCompatActivity {
 
 
     public void volleySetDefaultAreas() {
-        String url = "http://10.0.2.2/android/jobOfferAreas.php";
+        String url = Utils.getUrl()+"jobOfferAreas.php";
+        areasIds = "";
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
@@ -1027,14 +1006,14 @@ public class SettingActivity  extends AppCompatActivity {
                             System.out.println(settingsPreferences.getInt("numberOfAreas", 0));
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObjectCategory = jsonArray.getJSONObject(i);
-                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jaarea_id"))).apply();
-                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
-                                settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jaarea_title")).apply();
-                                if (i < jsonArray.length() - 1) {
-                                    areasIds += jsonObjectCategory.getString("jaarea_id") + ",";
+                                settingsPreferences.edit().putInt("offerAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putInt("checkedAreaId " + i, Integer.valueOf(jsonObjectCategory.getString("jloc_id"))).apply();
+                                settingsPreferences.edit().putString("offerAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
+                                settingsPreferences.edit().putString("checkedAreaTitle " + i, jsonObjectCategory.getString("jloc_title")).apply();
+                                if (areasIds.equals("")) {
+                                    areasIds += jsonObjectCategory.getString("jloc_id");
                                 } else
-                                    areasIds += jsonObjectCategory.getString("jaarea_id");
+                                    areasIds +=  ","+jsonObjectCategory.getString("jloc_id");
                                 System.out.println(areasIds.toString());
 
                                 System.out.println(jsonObjectCategory.toString());
@@ -1080,7 +1059,7 @@ public class SettingActivity  extends AppCompatActivity {
                 }
                 System.out.println("Volley: " + message);
                 if (!message.equals("")) {
-                    Toast.makeText(SettingActivity.this, "There is some problem with the server (" + message + ")", Toast.LENGTH_LONG).show();
+                    Toast.makeText(SettingActivity.this, Utils.getServerError(), Toast.LENGTH_LONG).show();
                     Intent intentError = new Intent(SettingActivity.this, MainActivity.class);
                     startActivity(intentError);
                 }
@@ -1088,37 +1067,6 @@ public class SettingActivity  extends AppCompatActivity {
         }
         );
         Volley.newRequestQueue(SettingActivity.this).add(stringRequest);
-    }
-
-
-    public void btnIntervalClicked(View view) {
-        final String[] select = {"Every Day", "Once a Week", "Twice a Week"};
-        AlertDialog dialog = new AlertDialog.Builder(SettingActivity.this)
-                .setTitle("Select State")
-                .setSingleChoiceItems(select, 0, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        selected = which;
-                    }
-                })
-
-                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (selected == 0) {
-                            settingsPreferences.edit().putLong("interval", 1000000).apply();
-                            Toast.makeText(SettingActivity.this, String.valueOf(settingsPreferences.getLong("interval", 0)), Toast.LENGTH_LONG).show();
-                        } else if (selected == 1) {
-                            settingsPreferences.edit().putLong("interval", 18000).apply();
-                            Toast.makeText(SettingActivity.this, String.valueOf(settingsPreferences.getLong("interval", 0)), Toast.LENGTH_LONG).show();
-                        } else {
-                            settingsPreferences.edit().putLong("interval", 36000).apply();
-                            Toast.makeText(SettingActivity.this, String.valueOf(settingsPreferences.getLong("interval", 0)), Toast.LENGTH_LONG).show();
-                        }
-                    }
-                })
-                .create();
-        dialog.show();
     }
 
 
