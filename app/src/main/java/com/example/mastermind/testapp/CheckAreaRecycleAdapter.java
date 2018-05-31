@@ -1,9 +1,5 @@
 package com.example.mastermind.testapp;
 
-/**
- * Created by Kostas on 31/5/2018.
- */
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
@@ -22,14 +18,14 @@ import com.example.mastermind.testapp.OfferCategory;
 import java.util.ArrayList;
 
 
-public class CheckRecycleAdapter extends
-        RecyclerView.Adapter<CheckRecycleAdapter.ViewHolder> {
+public class CheckAreaRecycleAdapter extends
+        RecyclerView.Adapter<CheckAreaRecycleAdapter.ViewHolder> {
 
-    private ArrayList<OfferCategory> filterList;
+    private ArrayList<OfferArea> filterList;
     private Context context;
     SharedPreferences settingsPreferences;
 
-    public CheckRecycleAdapter(ArrayList<OfferCategory> filterModelList
+    public CheckAreaRecycleAdapter(ArrayList<OfferArea> filterModelList
             , Context ctx) {
         filterList = filterModelList;
         context = ctx;
@@ -37,7 +33,7 @@ public class CheckRecycleAdapter extends
     }
 
     @Override
-    public CheckRecycleAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
+    public CheckAreaRecycleAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
                                                              int viewType) {
 
         View view = LayoutInflater.from(parent.getContext())
@@ -49,12 +45,12 @@ public class CheckRecycleAdapter extends
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        OfferCategory filterM = filterList.get(position);
+        OfferArea filterM = filterList.get(position);
         holder.checkBox.setText(filterM.getTitle());
-        for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedCategories",0); j++) {
+        for (int j = 0; j < settingsPreferences.getInt("numberOfCheckedAreas",0); j++) {
             System.out.println(holder.checkBox.getText() + "In the checkboxadapter");
-            System.out.println(settingsPreferences.getString("checkedCategoryTitle " + j, ""));
-            if (holder.checkBox.getText().equals(settingsPreferences.getString("checkedCategoryTitle " + j, ""))) {
+            System.out.println(settingsPreferences.getString("checkedAreaTitle " + j, ""));
+            if (holder.checkBox.getText().equals(settingsPreferences.getString("checkedAreaTitle " + j, ""))) {
                 holder.checkBox.setChecked(true);
             }
         }
@@ -65,14 +61,6 @@ public class CheckRecycleAdapter extends
         return filterList.size();
     }
 
-    public OfferCategory getOffer(int i){
-        return filterList.get(i);
-    }
-
-    public CheckBox getCheckBox(ViewHolder holder){
-        return holder.checkBox;
-
-    }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
@@ -86,4 +74,5 @@ public class CheckRecycleAdapter extends
         }
 
     }
+
 }
